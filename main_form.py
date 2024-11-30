@@ -7,7 +7,25 @@ from note_category import NoteCategory
 from data_serializer import DataSerializer
 
 class MainForm(QWidget):
+    """
+    Главная форма приложения NoteApp.
+
+    Этот класс управляет взаимодействием с пользователем, включая создание, редактирование и сохранение заметок,
+    а также загрузку заметок из файла.
+
+    Атрибуты:
+        work_category (NoteCategory): Категория заметок "Работа".
+        personal_category (NoteCategory): Категория заметок "Личное".
+    """
+
     def __init__(self):
+        """
+        Инициализация главной формы приложения.
+
+        Создает окно приложения и инициализирует категории для заметок.
+
+        Инициализирует UI-компоненты и настраивает поведение окна.
+        """
         super().__init__()
         self.setWindowTitle("NoteApp")
         self.setGeometry(100, 100, 600, 400)
@@ -18,6 +36,12 @@ class MainForm(QWidget):
         self.init_ui()
 
     def init_ui(self):
+        """
+        Инициализация пользовательского интерфейса.
+
+        Создает компоненты интерфейса, такие как поля для ввода заголовка и содержания заметки, 
+        а также кнопки для сохранения и загрузки заметок. Все элементы добавляются в компоновку.
+        """
         layout = QVBoxLayout()
         
         # Заголовок
@@ -47,6 +71,13 @@ class MainForm(QWidget):
         self.setLayout(layout)
 
     def save_note(self):
+        """
+        Сохраняет заметку, полученную из полей ввода.
+
+        Создает объект заметки и сохраняет его в соответствующую категорию.
+        Также сериализует все заметки и сохраняет их в файл.
+        Если заметка успешно сохранена, отображает сообщение с подтверждением.
+        """
         title = self.title_input.text()
         content = self.content_input.toPlainText()
         
@@ -59,8 +90,16 @@ class MainForm(QWidget):
             }
             DataSerializer.save_to_file(notes_data, "notes_data.json")
             self.note_display.setText(f"Заметка '{title}' сохранена!")
+        else:
+            self.note_display.setText("Ошибка: Заголовок и содержание не могут быть пустыми.")
 
     def load_notes(self):
+        """
+        Загружает заметки из файла.
+
+        Загружает сериализованные данные из файла и отображает их в текстовом поле.
+        Если загрузка данных не удалась, выводится сообщение об ошибке.
+        """
         loaded_data = DataSerializer.load_from_file("notes_data.json")
         if loaded_data:
             notes_text = ""
