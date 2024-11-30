@@ -1,7 +1,5 @@
-# main_form.py
-
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QTextEdit, QLabel, QLineEdit, QFormLayout
+from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QTextEdit, QLabel, QLineEdit, QMessageBox
 from note import Note
 from note_category import NoteCategory
 from data_serializer import DataSerializer
@@ -81,17 +79,22 @@ class MainForm(QWidget):
         title = self.title_input.text()
         content = self.content_input.toPlainText()
         
-        if title and content:
-            new_note = Note(title, content)
-            self.personal_category.add_note(new_note)
-            notes_data = {
-                "work": self.work_category.get_notes(),
-                "personal": self.personal_category.get_notes()
-            }
-            DataSerializer.save_to_file(notes_data, "notes_data.json")
-            self.note_display.setText(f"Заметка '{title}' сохранена!")
-        else:
-            self.note_display.setText("Ошибка: Заголовок и содержание не могут быть пустыми.")
+        try:
+            if title and content:
+                new_note = Note(title, content)
+                self.personal_category.add_note(new_note)
+                notes_data = {
+                    "work": self.work_category.get_notes(),
+                    "personal": self.personal_category.get_notes()
+                }
+                DataSerializer.save_to_file(notes_data, "notes_data.json")
+                self.note_display.setText(f"Заметка '{title}' сохранена!")
+            else:
+                raise ValueError("Ошибка: Заголовок и содержание не могут быть пустыми.")
+        except ValueError as ve:
+            self.display_error("Ошибка сохранения заметки", str(ve))
+        except Exception as e:
+            self.display_error("Неизвестная ошибка", str(e))
 
     def load_notes(self):
         """
@@ -100,16 +103,36 @@ class MainForm(QWidget):
         Загружает сериализованные данные из файла и отображает их в текстовом поле.
         Если загрузка данных не удалась, выводится сообщение об ошибке.
         """
-        loaded_data = DataSerializer.load_from_file("notes_data.json")
-        if loaded_data:
-            notes_text = ""
-            for category, notes in loaded_data.items():
-                notes_text += f"Категория: {category}\n"
-                for note in notes:
-                    notes_text += f"{note}\n\n"
-            self.note_display.setText(notes_text)
-        else:
-            self.note_display.setText("Не удалось загрузить данные.")
+        try:
+            loaded_data = DataSerializer.load_from_file("notes_data.json")
+            if loaded_data:
+                notes_text = ""
+                for category, notes in loaded_data.items():
+                    notes_text += f"Категория: {category}\n"
+                    for note in notes:
+                        notes_text += f"{note}\n\n"
+                self.note_display.setText(notes_text)
+            else:
+                raise FileNotFoundError("Не удалось загрузить данные. Файл не найден или пуст.")
+        except FileNotFoundError as fnf_error:
+            self.display_error("Ошибка загрузки данных", str(fnf_error))
+        except json.JSONDecodeError as json_error:
+            self.display_error("Ошибка чтения данных", "Не удалось прочитать данные из файла.")
+        except Exception as e:
+            self.display_error("Неизвестная ошибка", str(e))
+
+    def display_error(self, title: str, message: str):
+        """
+        Отображает всплывающее окно с ошибкой.
+
+        :param title: Заголовок окна.
+        :param message: Сообщение ошибки.
+        """
+        error_dialog = QMessageBox(self)
+        error_dialog.setIcon(QMessageBox.Critical)
+        error_dialog.setWindowTitle(title)
+        error_dialog.setText(message)
+        error_dialog.exec_()
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
