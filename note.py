@@ -7,12 +7,6 @@ class Note:
     Класс, представляющий заметку.
     """
     def __init__(self, title: str, content: str):
-        """
-        Инициализация заметки.
-        
-        :param title: Заголовок заметки.
-        :param content: Текст заметки.
-        """
         self._title = None
         self._content = None
         self._created_at = datetime.datetime.now()
@@ -41,7 +35,7 @@ class Note:
         if not value:
             raise ValueError("Текст заметки не может быть пустым.")
         self._content = value
-        self._modified_at = datetime.datetime.now()  # Обновление времени изменения
+        self._modified_at = datetime.datetime.now()
 
     def __str__(self):
         return f"Заголовок: {self.title}\nТекст: {self.content}\nСоздано: {self._created_at}\nИзменено: {self._modified_at}"
