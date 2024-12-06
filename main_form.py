@@ -1,9 +1,11 @@
 import sys
 from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QLineEdit, QTextEdit, QLabel, QComboBox, QListWidget, QDialog, QDialogButtonBox
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QRegExp
+from PyQt5.QtGui import QPalette, QRegExpValidator
 from note import Note
 from note_category import NoteCategory
 from data_serializer import DataSerializer
+import re
 
 class NoteEditorDialog(QDialog):
     def __init__(self, note=None, parent=None):
@@ -19,13 +21,23 @@ class NoteEditorDialog(QDialog):
 
         self.title_input = QLineEdit(self)
         self.title_input.setPlaceholderText("Заголовок")
+        self.title_input.setMaxLength(100)  # Ограничение на количество символов
+        self.title_input.setValidator(QRegExpValidator(QRegExp("[A-Za-zА-Яа-я0-9_ ]*")))  # Разрешаем только буквы, цифры и пробелы
+        self.title_input.textChanged.connect(self.validate_input_on_change)  # Проверка при изменении текста
+
         if self.note:
             self.title_input.setText(self.note.title)
 
         self.content_input = QTextEdit(self)
         self.content_input.setPlaceholderText("Содержание")
+        self.content_input.textChanged.connect(self.validate_input_on_change)  # Проверка при изменении текста
+
         if self.note:
             self.content_input.setPlainText(self.note.content)
+
+        # Подсветка элементов
+        self.title_input.setStyleSheet("background-color: white;")
+        self.content_input.setStyleSheet("background-color: white;")
 
         button_box = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
         button_box.accepted.connect(self.save_note)
@@ -39,11 +51,15 @@ class NoteEditorDialog(QDialog):
 
         self.setLayout(layout)
 
+        # Устанавливаем обработчик на потерю фокуса
+        self.title_input.focusOutEvent = self.validate_input_focus_out
+        self.content_input.focusOutEvent = self.validate_input_focus_out
+
     def save_note(self):
         title = self.title_input.text()
         content = self.content_input.toPlainText()
 
-        if title and content:
+        if self.validate_input():
             if self.note:
                 self.note.title = title
                 self.note.content = content
@@ -53,6 +69,54 @@ class NoteEditorDialog(QDialog):
             self.accept()
         else:
             self.reject()
+
+    def validate_input(self):
+        """Проверка введенных данных на корректность"""
+        title = self.title_input.text()
+        content = self.content_input.toPlainText()
+        
+        # Проверка на пустоту заголовка и содержания
+        if not title or not content:
+            return False
+        
+        # Проверка заголовка на корректность символов
+        if not re.match(r'^[A-Za-zА-Яа-я0-9_ ]*$', title):
+            return False
+        
+        return True
+
+    def validate_input_focus_out(self, event):
+        """Проверка после потери фокуса"""
+        if self.validate_input():
+            # Подсветим как валидный элемент
+            self.set_valid(self.title_input)
+            self.set_valid(self.content_input)
+        else:
+            # Подсветим красным как некорректный
+            self.set_invalid(self.title_input)
+            self.set_invalid(self.content_input)
+        event.accept()
+
+    def set_invalid(self, widget):
+        """Подсветить элемент как некорректный"""
+        widget.setStyleSheet("background-color: #f8d7da; border: 1px solid red;")
+
+    def set_valid(self, widget):
+        """Подсветить элемент как валидный"""
+        widget.setStyleSheet("background-color: white; border: 1px solid black;")
+
+    def validate_input_on_change(self):
+        """Проверка ввода текста в реальном времени"""
+        # Убедимся, что оба поля инициализированы
+        if hasattr(self, 'title_input') and hasattr(self, 'content_input'):
+            if self.validate_input():
+                # Подсветим как валидный элемент
+                self.set_valid(self.title_input)
+                self.set_valid(self.content_input)
+            else:
+                # Подсветим как некорректный
+                self.set_invalid(self.title_input)
+                self.set_invalid(self.content_input)
 
     def get_note(self):
         return self.note
@@ -118,6 +182,10 @@ class MainForm(QWidget):
             "работа": self.work_category,
             "личное": self.personal_category
         }
+
+        # Устанавливаем категорию по умолчанию и обновляем список заметок
+        self.category_selector.setCurrentIndex(0)  # Устанавливаем "Работа" по умолчанию
+        self.update_note_selector()
 
     def load_notes_from_file(self):
         """Загружает заметки из файла JSON"""
@@ -220,6 +288,7 @@ class MainForm(QWidget):
             note = next((n for n in selected_category.notes if n.title == note_title), None)
             if note:
                 self.note_display.setText(f"Заметка:\n\n{note.title}\n\n{note.content}")
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
