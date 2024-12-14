@@ -64,3 +64,15 @@ class Note:
         note._created_at = datetime.datetime.fromisoformat(data["created_at"])
         note._modified_at = datetime.datetime.fromisoformat(data["modified_at"])
         return note
+
+    def __str__(self):
+        """
+        Возвращает строковое представление заметки.
+        """
+        return (
+            f"Заголовок: {self.title}\n"
+            f"Текст: {self.content}\n"
+            f"Категория: {self.category}\n"
+            f"Создано: {self.created_at.strftime('%Y-%m-%d %H:%M:%S')}\n"
+            f"Изменено: {self.modified_at.strftime('%Y-%m-%d %H:%M:%S')}"
+        )
