@@ -1,297 +1,298 @@
 import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QLineEdit, QTextEdit, QLabel, QComboBox, QListWidget, QDialog, QDialogButtonBox
-from PyQt5.QtCore import Qt, QRegExp
-from PyQt5.QtGui import QPalette, QRegExpValidator
+from PyQt5.QtWidgets import (
+    QApplication, QWidget, QVBoxLayout, QPushButton, QLineEdit, QTextEdit, QLabel,
+    QComboBox, QListWidget, QDialog, QDialogButtonBox, QMessageBox, QHBoxLayout, QFrame
+)
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QPalette, QColor 
 from note import Note
-from note_category import NoteCategory
 from data_serializer import DataSerializer
-import re
+
+class AboutDialog(QDialog):
+    """
+    Окно с информацией о программе.
+    """
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("О программе")
+        self.setFixedSize(400, 200)
+
+        layout = QVBoxLayout()
+
+        # Название программы
+        app_name_label = QLabel("NoteApp", self)
+        app_name_label.setStyleSheet("font-size: 16pt; font-weight: bold;")
+        layout.addWidget(app_name_label)
+
+        # Имя автора
+        author_label = QLabel("Автор: Бармотин С.А.", self)
+        author_label.setStyleSheet("font-size: 12pt;")
+        layout.addWidget(author_label)
+
+        # Почта
+        email_label = QLabel('<a href="mailto:Barmotins@gmail.com">Почта: Barmotins@gmail.com</a>', self)
+        email_label.setOpenExternalLinks(True)
+        email_label.setStyleSheet("font-size: 12pt; color: blue;")
+        layout.addWidget(email_label)
+
+        # GitHub
+        github_label = QLabel('<a href="https://github.com/Fufurum/NoteApp">GitHub: https://github.com/Fufurum/NoteApp</a>', self)
+        github_label.setOpenExternalLinks(True)
+        github_label.setStyleSheet("font-size: 12pt; color: blue;")
+        layout.addWidget(github_label)
+
+        # Кнопка закрытия
+        close_button = QDialogButtonBox(QDialogButtonBox.Ok)
+        close_button.accepted.connect(self.accept)
+        layout.addWidget(close_button)
+
+        self.setLayout(layout)
+
+
 
 class NoteEditorDialog(QDialog):
     def __init__(self, note=None, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Создание/Редактирование заметки")
-        self.setGeometry(150, 150, 400, 300)
-
+        self.setWindowTitle("Редактор заметок" if note else "Создать заметку")
         self.note = note
-        self.init_ui()
 
-    def init_ui(self):
         layout = QVBoxLayout()
+        self.title_edit = QLineEdit(self)
+        self.title_edit.setPlaceholderText("Введите заголовок")
+        layout.addWidget(QLabel("Заголовок:"))
+        layout.addWidget(self.title_edit)
 
-        self.title_input = QLineEdit(self)
-        self.title_input.setPlaceholderText("Заголовок")
-        self.title_input.setMaxLength(100)  # Ограничение на количество символов
-        self.title_input.setValidator(QRegExpValidator(QRegExp("[A-Za-zА-Яа-я0-9_ ]*")))  # Разрешаем только буквы, цифры и пробелы
-        self.title_input.textChanged.connect(self.validate_input_on_change)  # Проверка при изменении текста
+        self.content_edit = QTextEdit(self)
+        self.content_edit.setPlaceholderText("Введите содержимое (минимум 5 символов)")
+        layout.addWidget(QLabel("Содержимое:"))
+        layout.addWidget(self.content_edit)
 
-        if self.note:
-            self.title_input.setText(self.note.title)
+        self.category_combo = QComboBox(self)
+        self.category_combo.addItems(["Все", "Работа", "Дом", "Здоровье и Спорт", "Люди", "Документы", "Финансы", "Разное"])
+        layout.addWidget(QLabel("Категория:"))
+        layout.addWidget(self.category_combo)
 
-        self.content_input = QTextEdit(self)
-        self.content_input.setPlaceholderText("Содержание")
-        self.content_input.textChanged.connect(self.validate_input_on_change)  # Проверка при изменении текста
+        self.date_label = QLabel(self)
+        layout.addWidget(QLabel("Дата создания:"))
+        layout.addWidget(self.date_label)
 
-        if self.note:
-            self.content_input.setPlainText(self.note.content)
-
-        # Подсветка элементов
-        self.title_input.setStyleSheet("background-color: white;")
-        self.content_input.setStyleSheet("background-color: white;")
-
-        button_box = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
-        button_box.accepted.connect(self.save_note)
-        button_box.rejected.connect(self.reject)
-
-        layout.addWidget(QLabel("Заголовок"))
-        layout.addWidget(self.title_input)
-        layout.addWidget(QLabel("Содержание"))
-        layout.addWidget(self.content_input)
-        layout.addWidget(button_box)
+        buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        buttons.accepted.connect(self.accept)
+        buttons.rejected.connect(self.reject)
+        layout.addWidget(buttons)
 
         self.setLayout(layout)
 
-        # Устанавливаем обработчик на потерю фокуса
-        self.title_input.focusOutEvent = self.validate_input_focus_out
-        self.content_input.focusOutEvent = self.validate_input_focus_out
-
-    def save_note(self):
-        title = self.title_input.text()
-        content = self.content_input.toPlainText()
-
-        if self.validate_input():
-            if self.note:
-                self.note.title = title
-                self.note.content = content
-            else:
-                self.note = Note(title, content)
-
-            self.accept()
+        if self.note:
+            self.title_edit.setText(note.title)
+            self.content_edit.setText(note.content)
+            self.category_combo.setCurrentText(note.category)
+            self.date_label.setText(note.created_at.strftime("%Y-%m-%d %H:%M:%S"))
         else:
-            self.reject()
+            self.date_label.setText("Создаётся сейчас")
 
     def validate_input(self):
-        """Проверка введенных данных на корректность"""
-        title = self.title_input.text()
-        content = self.content_input.toPlainText()
-        
-        # Проверка на пустоту заголовка и содержания
-        if not title or not content:
-            return False
-        
-        # Проверка заголовка на корректность символов
-        if not re.match(r'^[A-Za-zА-Яа-я0-9_ ]*$', title):
-            return False
-        
-        return True
+        """
+        Validate the input fields and provide visual feedback.
+        """
+        valid = True
+        palette = self.title_edit.palette()
 
-    def validate_input_focus_out(self, event):
-        """Проверка после потери фокуса"""
-        if self.validate_input():
-            # Подсветим как валидный элемент
-            self.set_valid(self.title_input)
-            self.set_valid(self.content_input)
+        # Validate title
+        if not self.title_edit.text().strip():
+            valid = False
+            palette.setColor(QPalette.Base, QColor("red"))
         else:
-            # Подсветим красным как некорректный
-            self.set_invalid(self.title_input)
-            self.set_invalid(self.content_input)
-        event.accept()
+            palette.setColor(QPalette.Base, QColor("white"))
+        self.title_edit.setPalette(palette)
 
-    def set_invalid(self, widget):
-        """Подсветить элемент как некорректный"""
-        widget.setStyleSheet("background-color: #f8d7da; border: 1px solid red;")
+        # Validate content
+        content_palette = self.content_edit.palette()
+        if len(self.content_edit.toPlainText().strip()) < 5:
+            valid = False
+            content_palette.setColor(QPalette.Base, QColor("red"))
+        else:
+            content_palette.setColor(QPalette.Base, QColor("white"))
+        self.content_edit.setPalette(content_palette)
 
-    def set_valid(self, widget):
-        """Подсветить элемент как валидный"""
-        widget.setStyleSheet("background-color: white; border: 1px solid black;")
+        return valid
 
-    def validate_input_on_change(self):
-        """Проверка ввода текста в реальном времени"""
-        # Убедимся, что оба поля инициализированы
-        if hasattr(self, 'title_input') and hasattr(self, 'content_input'):
-            if self.validate_input():
-                # Подсветим как валидный элемент
-                self.set_valid(self.title_input)
-                self.set_valid(self.content_input)
-            else:
-                # Подсветим как некорректный
-                self.set_invalid(self.title_input)
-                self.set_invalid(self.content_input)
+    def accept(self):
+        if not self.validate_input():
+            QMessageBox.critical(self, "Ошибка", "Пожалуйста, заполните все обязательные поля.")
+            return
+        super().accept()
 
-    def get_note(self):
-        return self.note
+    def get_note_data(self):
+        return {
+            "title": self.title_edit.text(),
+            "content": self.content_edit.toPlainText(),
+            "category": self.category_combo.currentText(),
+        }
 
 
 class MainForm(QWidget):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("NoteApp")
-        self.setGeometry(100, 100, 600, 400)
+        self.resize(900, 600)  # Увеличен размер окна
+        self.layout = QVBoxLayout(self)
+        self.notes = []
+        self.load_notes()
 
-        # Инициализация категорий
-        self.work_category = NoteCategory("Работа")
-        self.personal_category = NoteCategory("Личное")
+        self.search_bar = QLineEdit(self)
+        self.search_bar.setPlaceholderText("Поиск по заголовкам...")
+        self.search_bar.textChanged.connect(self.filter_notes)
+        self.layout.addWidget(self.search_bar)
 
-        # Загружаем данные из файла
-        self.load_notes_from_file()
+        self.sort_combo = QComboBox(self)
+        self.sort_combo.addItems(["Сортировка: По имени", "Сортировка: По дате"])
+        self.sort_combo.currentIndexChanged.connect(self.sort_notes)
+        self.layout.addWidget(self.sort_combo)
 
-        self.init_ui()
+        self.category_combo = QComboBox(self)
+        self.category_combo.addItems(["Все", "Работа", "Дом", "Здоровье и Спорт", "Люди", "Документы", "Финансы", "Разное"])
+        self.category_combo.currentIndexChanged.connect(self.filter_by_category)
+        self.layout.addWidget(self.category_combo)
 
-    def init_ui(self):
-        layout = QVBoxLayout()
+        self.note_list = QListWidget(self)
+        self.note_list.itemClicked.connect(self.show_note_content)
+        self.note_list.itemDoubleClicked.connect(self.edit_note)
+        self.layout.addWidget(self.note_list)
 
-        # Кнопка для создания новой заметки
-        self.create_button = QPushButton("Создать новую заметку", self)
-        self.create_button.clicked.connect(self.create_note)
+        self.content_frame = QFrame(self)
+        self.content_frame.setFrameShape(QFrame.StyledPanel)
+        self.content_layout = QVBoxLayout(self.content_frame)
 
-        # Кнопка для редактирования выбранной заметки
-        self.edit_button = QPushButton("Редактировать заметку", self)
-        self.edit_button.clicked.connect(self.edit_note)
+        self.content_title_label = QLabel("Заголовок: (не выбран)")
+        self.content_layout.addWidget(self.content_title_label)
 
-        # Кнопка для удаления выбранной заметки
-        self.delete_button = QPushButton("Удалить заметку", self)
-        self.delete_button.clicked.connect(self.delete_note)
+        self.content_body_label = QLabel("Содержимое: (не выбрано)")
+        self.content_layout.addWidget(self.content_body_label)
 
-        # Выпадающий список для выбора категории
-        self.category_selector = QComboBox(self)
-        self.category_selector.addItem("Работа")
-        self.category_selector.addItem("Личное")
-        self.category_selector.currentTextChanged.connect(self.update_note_selector)
+        self.content_category_label = QLabel("Категория: (не выбрано)")
+        self.content_layout.addWidget(self.content_category_label)
 
-        # Список для отображения заметок
-        self.note_selector = QListWidget(self)
-        self.note_selector.clicked.connect(self.select_note)
+        self.content_created_label = QLabel("Дата создания: (не выбрано)")
+        self.content_layout.addWidget(self.content_created_label)
 
-        # Вывод заметок
-        self.note_display = QTextEdit(self)
-        self.note_display.setReadOnly(True)
+        self.content_modified_label = QLabel("Дата модификации: (не выбрано)")
+        self.content_layout.addWidget(self.content_modified_label)
 
-        # Добавляем элементы в layout
-        layout.addWidget(self.create_button)
-        layout.addWidget(self.edit_button)
-        layout.addWidget(self.delete_button)
-        layout.addWidget(QLabel("Выберите категорию"))
-        layout.addWidget(self.category_selector)
-        layout.addWidget(self.note_selector)
-        layout.addWidget(self.note_display)
+        self.layout.addWidget(self.content_frame)
 
-        self.setLayout(layout)
+        button_layout = QHBoxLayout()
+        add_button = QPushButton("Добавить заметку", self)
+        add_button.clicked.connect(self.add_note)
+        button_layout.addWidget(add_button)
 
-        # Словарь для категорий
-        self.categories = {
-            "работа": self.work_category,
-            "личное": self.personal_category
-        }
+        delete_button = QPushButton("Удалить заметку", self)
+        delete_button.clicked.connect(self.delete_note)
+        button_layout.addWidget(delete_button)
 
-        # Устанавливаем категорию по умолчанию и обновляем список заметок
-        self.category_selector.setCurrentIndex(0)  # Устанавливаем "Работа" по умолчанию
-        self.update_note_selector()
+        about_button = QPushButton("Автор", self)  # Кнопка "Автор"
+        about_button.clicked.connect(self.show_about_dialog)
+        button_layout.addWidget(about_button)
 
-    def load_notes_from_file(self):
-        """Загружает заметки из файла JSON"""
-        loaded_data = DataSerializer.load_from_file("notes_data.json")
-        if loaded_data:
-            for category, notes in loaded_data.items():
-                for note_data in notes:
-                    note = Note(note_data['title'], note_data['content'])
-                    if category == "work":
-                        self.work_category.add_note(note)
-                    elif category == "personal":
-                        self.personal_category.add_note(note)
-        else:
-            print("Файл не найден или пуст.")
+        self.layout.addLayout(button_layout)
+        self.setLayout(self.layout)
+        self.refresh_note_list()
 
-    def update_note_selector(self):
-        """Обновляет список заметок для выбранной категории"""
-        self.note_selector.clear()
 
-        category_name = self.category_selector.currentText().lower()
-        selected_category = self.categories.get(category_name)
 
-        if selected_category:
-            # Список заметок из выбранной категории
-            notes = selected_category.notes
-            for note in notes:
-                self.note_selector.addItem(note.title)
 
-    def create_note(self):
-        """Открывает окно для создания новой заметки"""
+    def show_about_dialog(self):
+        """
+        Открывает окно AboutDialog при нажатии на кнопку "Автор".
+        """
+        about_dialog = AboutDialog(self)
+        about_dialog.exec_()
+
+    def load_notes(self):
+        try:
+            self.notes = DataSerializer.load()
+        except Exception as e:
+            self.notes = []
+
+    def save_notes(self):
+        DataSerializer.save(self.notes)
+
+    def refresh_note_list(self):
+        self.note_list.clear()
+        for note in self.notes:
+            self.note_list.addItem(f"{note.title} ({note.category}) - {note.created_at.strftime('%Y-%m-%d %H:%M:%S')}")
+
+    def add_note(self):
         dialog = NoteEditorDialog(parent=self)
         if dialog.exec_() == QDialog.Accepted:
-            new_note = dialog.get_note()
-            if new_note:
-                category_name = self.category_selector.currentText().lower()
-                selected_category = self.categories.get(category_name)
-                selected_category.add_note(new_note)
-                self.update_note_selector()
+            data = dialog.get_note_data()
+            note = Note(title=data["title"], content=data["content"], category=data["category"])
+            self.notes.append(note)
+            self.save_notes()
+            self.refresh_note_list()
 
-                # Сохраняем данные в файл
-                notes_data = {
-                    "work": [note.to_dict() for note in self.work_category.notes],
-                    "personal": [note.to_dict() for note in self.personal_category.notes]
-                }
-                DataSerializer.save_to_file(notes_data, "notes_data.json")
-                self.note_display.setText(f"Заметка '{new_note.title}' сохранена!")
-
-    def edit_note(self):
-        """Открывает окно для редактирования выбранной заметки"""
-        selected_item = self.note_selector.currentItem()
-        if selected_item:
-            category_name = self.category_selector.currentText().lower()
-            selected_category = self.categories.get(category_name)
-            note_title = selected_item.text()
-            note = next((n for n in selected_category.notes if n.title == note_title), None)
-
-            if note:
-                dialog = NoteEditorDialog(note, parent=self)
-                if dialog.exec_() == QDialog.Accepted:
-                    updated_note = dialog.get_note()
-                    if updated_note:
-                        self.update_note_selector()
-
-                        # Сохраняем обновленные данные
-                        notes_data = {
-                            "work": [note.to_dict() for note in self.work_category.notes],
-                            "personal": [note.to_dict() for note in self.personal_category.notes]
-                        }
-                        DataSerializer.save_to_file(notes_data, "notes_data.json")
-                        self.note_display.setText(f"Заметка '{updated_note.title}' обновлена!")
+    def edit_note(self, item):
+        index = self.note_list.row(item)
+        note = self.notes[index]
+        dialog = NoteEditorDialog(note=note, parent=self)
+        if dialog.exec_() == QDialog.Accepted:
+            data = dialog.get_note_data()
+            note.title = data["title"]
+            note.content = data["content"]
+            note.category = data["category"]
+            self.save_notes()
+            self.refresh_note_list()
 
     def delete_note(self):
-        """Удаляет выбранную заметку"""
-        selected_item = self.note_selector.currentItem()
-        if selected_item:
-            category_name = self.category_selector.currentText().lower()
-            selected_category = self.categories.get(category_name)
-            note_title = selected_item.text()
-            note = next((n for n in selected_category.notes if n.title == note_title), None)
+        current_item = self.note_list.currentItem()
+        if not current_item:
+            QMessageBox.warning(self, "Ошибка", "Выберите заметку для удаления.")
+            return
 
-            if note:
-                selected_category.notes.remove(note)
-                self.update_note_selector()
+        index = self.note_list.row(current_item)
+        reply = QMessageBox.question(self, "Подтверждение", f"Удалить заметку '{self.notes[index].title}'?",
+                                     QMessageBox.Yes | QMessageBox.No, QMessageBox.No)
+        if reply == QMessageBox.Yes:
+            del self.notes[index]
+            self.save_notes()
+            self.refresh_note_list()
 
-                # Сохраняем обновленные данные
-                notes_data = {
-                    "work": [note.to_dict() for note in self.work_category.notes],
-                    "personal": [note.to_dict() for note in self.personal_category.notes]
-                }
-                DataSerializer.save_to_file(notes_data, "notes_data.json")
-                self.note_display.setText(f"Заметка '{note.title}' удалена.")
+    def filter_notes(self):
+        query = self.search_bar.text().lower()
+        self.note_list.clear()
+        for note in self.notes:
+            if query in note.title.lower():
+                self.note_list.addItem(f"{note.title} ({note.category}) - {note.created_at.strftime('%Y-%m-%d %H:%M:%S')}")
 
-    def select_note(self):
-        """Выбирает заметку из списка для отображения"""
-        selected_item = self.note_selector.currentItem()
-        if selected_item:
-            category_name = self.category_selector.currentText().lower()
-            selected_category = self.categories.get(category_name)
-            note_title = selected_item.text()
-            note = next((n for n in selected_category.notes if n.title == note_title), None)
-            if note:
-                self.note_display.setText(f"Заметка:\n\n{note.title}\n\n{note.content}")
+    def filter_by_category(self):
+        selected_category = self.category_combo.currentText()
+        self.note_list.clear()
+        for note in self.notes:
+            if selected_category == "Все" or note.category == selected_category:
+                self.note_list.addItem(f"{note.title} ({note.category}) - {note.created_at.strftime('%Y-%m-%d %H:%M:%S')}")
+
+    def sort_notes(self):
+        if self.sort_combo.currentText() == "Сортировка: По имени":
+            self.notes.sort(key=lambda note: note.title)
+        elif self.sort_combo.currentText() == "Сортировка: По дате":
+            self.notes.sort(key=lambda note: note.created_at)
+        self.refresh_note_list()
+
+    def show_note_content(self, item):
+        index = self.note_list.row(item)
+        note = self.notes[index]
+        self.content_title_label.setText(f"Заголовок: {note.title}")
+        self.content_body_label.setText(f"Содержимое: {note.content}")
+        self.content_category_label.setText(f"Категория: {note.category}")
+        self.content_created_label.setText(f"Дата создания: {note.created_at.strftime('%Y-%m-%d %H:%M:%S')}")
+        if note.modified_at != note.created_at:
+            self.content_modified_label.setText(f"Дата модификации: {note.modified_at.strftime('%Y-%m-%d %H:%M:%S')}")
+        else:
+            self.content_modified_label.setText("Дата модификации: Не изменено")
 
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    main_window = MainForm()
-    main_window.show()
+    window = MainForm()
+    window.show()
     sys.exit(app.exec_())

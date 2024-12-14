@@ -1,18 +1,32 @@
 import json
+from note import Note
 
 class DataSerializer:
     @staticmethod
     def save_to_file(data, filename: str):
         """Сохраняет данные в файл"""
         with open(filename, 'w', encoding='utf-8') as file:
-            json.dump(data, file, default=str, ensure_ascii=False)
+            json.dump([note.to_dict() for note in data], file, ensure_ascii=False, indent=4)
 
     @staticmethod
     def load_from_file(filename: str):
         """Загружает данные из файла"""
         try:
             with open(filename, 'r', encoding='utf-8') as file:
-                return json.load(file)
+                return [Note.from_dict(item) for item in json.load(file)]
         except FileNotFoundError:
             print("Файл не найден. Будет создан новый.")
-            return None
+            return []
+        except json.JSONDecodeError:
+            print("Ошибка чтения файла. Файл будет очищен.")
+            return []
+
+    @staticmethod
+    def save(data, filename="notes_data.json"):
+        """Упрощённая функция сохранения"""
+        DataSerializer.save_to_file(data, filename)
+
+    @staticmethod
+    def load(filename="notes_data.json"):
+        """Упрощённая функция загрузки"""
+        return DataSerializer.load_from_file(filename)

@@ -20,8 +20,8 @@ class NoteCategory:
             raise ValueError("Можно добавлять только объекты типа Note.")
         self.notes.append(note)
 
-    def get_notes(self):
-        return [str(note) for note in self.notes]
+    def remove_note_by_title(self, title: str):
+        self.notes = [note for note in self.notes if note.title != title]
 
-    def __str__(self):
-        return f"Категория: {self.name}\nЗаметки: {len(self.notes)}"
+    def get_notes(self):
+        return self.notes
