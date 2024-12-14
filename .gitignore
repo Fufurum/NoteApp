@@ -8,3 +8,5 @@ notevenv/
 __pycache__/
 *.pyc
 *.pyo
+# Игнорировать кэш Pytest
+.pytest_cache
